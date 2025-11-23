@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package image;
+
+option go_package = "ride-sharing/shared/generated/image;imagepb";
+option csharp_namespace = "RideSharing.Grpc.Image";
+
+service ImageService {
+  rpc UploadToFolder (UploadRequest) returns (UploadResponse);
+}
+
+message UploadRequest {
+  string folder = 1;
+  string fileName = 2;
+  bytes content = 3;
+  string contentType = 4;
+}
+
+message UploadResponse {
+  string url = 1;       // public or internal URL/path
+  string path = 2;      // server path if applicable
+  string message = 3;
+}

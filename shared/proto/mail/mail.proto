@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package mail;
+
+option go_package = "ride-sharing/shared/generated/mail;mailpb";
+option csharp_namespace = "RideSharing.Grpc.Mail";
+
+service MailService {
+  rpc SendMail (MailRequest) returns (MailResponse);
+}
+
+message MailRequest {
+  string from = 1;
+  string fromName = 2;
+  string to = 3;
+  string subject = 4;
+  string message = 5;
+  repeated string attachments = 6;
+}
+
+message MailResponse {
+  string message = 1;
+}

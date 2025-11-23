@@ -50,4 +50,8 @@ require (
 	golang.org/x/tools v0.39.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
+	google.golang.org/grpc v1.69.4
+	google.golang.org/protobuf v1.36.3
 )
+
+replace ride-sharing/shared/generated => ../../shared/generated

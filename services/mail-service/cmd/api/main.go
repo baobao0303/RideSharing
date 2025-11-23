@@ -32,6 +32,8 @@ func main() {
 
 	// Start RPC server in background
 	go app.rpcListen()
+	// Start gRPC server in background
+	startGRPCServer(app.Mailer)
 
 	log.Println("Starting mail service on port", webPort)
 

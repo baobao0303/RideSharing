@@ -67,6 +67,8 @@ func main() {
 	// Set models instance for handlers
 	handlers.SetModels(&app.Models)
 
+	// Start gRPC server in background
+	startGRPCServer(&app.Models)
 
 	src := &http.Server{
 		Addr: fmt.Sprintf(":%s", webPort),

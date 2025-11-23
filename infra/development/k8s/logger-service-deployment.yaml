@@ -18,6 +18,7 @@ spec:
           ports:
             - containerPort: 80
             - containerPort: 5001
+            - containerPort: 50001
           env:
             - name: MONGO_URL
               value: "mongodb://admin:password@mongo:27017"
@@ -52,6 +53,9 @@ spec:
     - port: 5001
       targetPort: 5001
       name: rpc
+    - port: 50001
+      targetPort: 50001
+      name: grpc
   selector:
     app: logger-service
 

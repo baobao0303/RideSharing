@@ -18,6 +18,7 @@ spec:
           ports:
             - containerPort: 80
             - containerPort: 5002
+            - containerPort: 50002
           resources:
             requests:
               memory: "128Mi"
@@ -71,6 +72,9 @@ spec:
     - port: 5002
       targetPort: 5002
       name: rpc
+    - port: 50002
+      targetPort: 50002
+      name: grpc
   selector:
     app: mail-service
 

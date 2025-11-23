@@ -1,5 +1,7 @@
 using Yarp.ReverseProxy.Configuration;
 using Microsoft.OpenApi.Models;
+using RideSharing.Api.Services;
+using RideSharing.Grpc.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,6 +58,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
+// gRPC clients
+builder.Services.AddSingleton<RideSharing.Api.Services.GrpcClients>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -105,7 +110,17 @@ app.MapGet("/api/info", () => Results.Ok(new
     .WithName("GatewayInfo")
     .Produces<object>(StatusCodes.Status200OK);
 
-// Use YARP Reverse Proxy
+// HTTP -> gRPC bridge endpoints
+app.MapGroup("/api/v1/Auth")
+    .WithTags("Auth (HTTP->gRPC)")
+    .MapAuthEndpoints();
+
+// HTTP -> gRPC bridge endpoints for other services
+app.MapGroup("/api/v1/Logger").WithTags("Logger (HTTP->gRPC)").MapLoggerEndpoints();
+app.MapGroup("/api/v1/Mail").WithTags("Mail (HTTP->gRPC)").MapMailEndpoints();
+app.MapGroup("/api/v1/Image").WithTags("Image (HTTP->gRPC)").MapImageEndpoints();
+
+// Use YARP Reverse Proxy (kept for backward-compat)
 app.MapReverseProxy();
 
 app.Run();

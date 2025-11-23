@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package logger;
+
+option go_package = "ride-sharing/shared/generated/logger;loggerpb";
+option csharp_namespace = "RideSharing.Grpc.Logger";
+
+service LoggerService {
+  rpc LogInfo (LogRequest) returns (LogResponse);
+}
+
+message LogRequest {
+  string name = 1;
+  string data = 2;
+}
+
+message LogResponse {
+  string message = 1;
+}
+

@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "ride-sharing/shared/generated/auth;authpb";
+option csharp_namespace = "RideSharing.Grpc.Auth";
+
+// Auth service definition
+service AuthService {
+  rpc SignUp (SignUpRequest) returns (SignUpResponse);
+  rpc SignIn (SignInRequest) returns (SignInResponse);
+
+  rpc VerifyMail (VerifyMailRequest) returns (VerifyMailResponse);
+  rpc ResendOTP (ResendOTPRequest) returns (ResendOTPResponse);
+
+  rpc VerifyAccessToken (VerifyAccessTokenRequest) returns (VerifyAccessTokenResponse);
+  rpc RenewAccessToken (RenewAccessTokenRequest) returns (RenewAccessTokenResponse);
+
+  rpc GetProvinces (GetProvincesRequest) returns (GetProvincesResponse);
+  rpc GetWards (GetWardsRequest) returns (GetWardsResponse);
+}
+
+// Common messages
+message Empty { }
+
+// Token
+message VerifyAccessTokenRequest {
+  string token = 1;
+}
+
+message VerifyAccessTokenResponse {
+  bool valid = 1;
+  string message = 2;
+}
+
+message RenewAccessTokenRequest {
+  string vrto = 1; // refresh token
+}
+
+message RenewAccessTokenResponse {
+  string accessToken = 1;
+  string refreshToken = 2;
+  int32 expiresIn = 3;
+}
+
+// User auth
+message SignInRequest {
+  string userName = 1;
+  string password = 2;
+  string code = 3; // optional 2FA
+}
+
+message SignInResponse {
+  string accessToken = 1;
+  string refreshToken = 2;
+  int32 expiresIn = 3;
+  string userId = 4;
+  string userName = 5;
+}
+
+message SignUpRequest {
+  string firstName = 1;
+  string middleName = 2; // optional
+  string lastName = 3;
+  string email = 4;
+  string password = 5;
+  string cityId = 6;   // optional, numeric string
+  string genderId = 7; // optional, numeric string
+  string dob = 8;      // optional, ISO8601
+  string invitationToken = 9; // optional
+}
+
+message SignUpResponse {
+  string userId = 1;
+  string email = 2;
+  string firstName = 3;
+  string lastName = 4;
+  string message = 5;
+}
+
+message VerifyMailRequest {
+  string verificationOTPCode = 1;
+  string otp = 2;
+}
+
+message VerifyMailResponse {
+  string message = 1;
+  string userId = 2;
+}
+
+message ResendOTPRequest {
+  string verificationOTPCode = 1;
+}
+
+message ResendOTPResponse {
+  string message = 1;
+  string verificationToken = 2;
+}
+
+// Cities
+message City {
+  int32 id = 1;
+  string code = 2;
+  string name = 3;
+  string type = 4; // province | ward
+  string provinceCode = 5;
+  string parentCode = 6;
+}
+
+message GetProvincesRequest {}
+message GetProvincesResponse { repeated City provinces = 1; }
+
+message GetWardsRequest { string provinceCode = 1; }
+message GetWardsResponse { repeated City wards = 1; }
+
