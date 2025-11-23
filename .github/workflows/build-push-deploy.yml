@@ -1,0 +1,112 @@
+name: Build & Push (and optional Deploy)
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: docker.io
+      ORG: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+
+      - name: Go env
+        run: |
+          go env
+
+      - name: Build Go binaries (like Tilt local_resource)
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o build/api-gateway ./services/api-gateway
+          cd services/auth && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../build/auth ./cmd/api && cd -
+          cd services/logger-service && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../build/logger-service ./cmd/api && cd -
+          cd services/mail-service && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../../build/mail-service ./cmd/api && cd -
+
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push auth
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/development/docker/auth.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/auth:latest
+            ${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/auth:${{ github.sha }}
+
+      - name: Build & Push logger-service
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/development/docker/logger-service.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/logger-service:latest
+            ${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/logger-service:${{ github.sha }}
+
+      - name: Build & Push mail-service
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/development/docker/mail-service.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/mail-service:latest
+            ${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/mail-service:${{ github.sha }}
+
+      - name: Build & Push api-gateway
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/development/docker/api-gateway.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/api-gateway:latest
+            ${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/api-gateway:${{ github.sha }}
+
+  deploy-k8s:
+    needs: build-push
+    runs-on: ubuntu-latest
+    if: ${{ secrets.KUBE_CONFIG != '' }}
+    env:
+      REGISTRY: docker.io
+      ORG: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${KUBE_CONFIG}" > ~/.kube/config
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Set images to new SHA tags (rolling update)
+        run: |
+          kubectl set image deployment/auth auth=${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/auth:${{ github.sha }} --namespace=default || true
+          kubectl set image deployment/logger-service logger-service=${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/logger-service:${{ github.sha }} --namespace=default || true
+          kubectl set image deployment/mail-service mail-service=${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/mail-service:${{ github.sha }} --namespace=default || true
+          kubectl set image deployment/api-gateway api-gateway=${{ env.REGISTRY }}/${{ env.ORG }}/ride-sharing/api-gateway:${{ github.sha }} --namespace=default || true
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/auth --timeout=120s || true
+          kubectl rollout status deployment/logger-service --timeout=120s || true
+          kubectl rollout status deployment/mail-service --timeout=120s || true
+          kubectl rollout status deployment/api-gateway --timeout=120s || true
+
