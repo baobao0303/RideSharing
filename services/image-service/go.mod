@@ -9,3 +9,4 @@ require (
 
 replace ride-sharing/shared/generated => ../../shared/generated
 
+

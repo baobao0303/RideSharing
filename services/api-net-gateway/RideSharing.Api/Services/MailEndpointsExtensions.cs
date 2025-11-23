@@ -19,3 +19,4 @@ public static class MailEndpointsExtensions
         return group;
     }
 }
+

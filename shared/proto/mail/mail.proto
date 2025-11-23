@@ -21,3 +21,4 @@ message MailRequest {
 message MailResponse {
   string message = 1;
 }
+

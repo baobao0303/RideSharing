@@ -19,3 +19,4 @@ public static class LoggerEndpointsExtensions
         return group;
     }
 }
+
