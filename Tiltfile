@@ -1,5 +1,11 @@
-# Load the restart_process extension
+# Load the restart_process extension (kept, but not used in custom_build mode)
 load('ext://restart_process', 'docker_build_with_restart')
+
+# Configure default Docker registry from environment
+# Set DOCKERHUB_USER to your Docker Hub username before running `tilt up`
+#   export DOCKERHUB_USER=your_dockerhub_user
+if 'DOCKERHUB_USER' in os.environ:
+  default_registry('docker.io/' + os.environ['DOCKERHUB_USER'])
 
 ### K8s Config ###
 
@@ -20,27 +26,23 @@ if os.name == 'nt':
 local_resource(
   'api-gateway-compile',
   gateway_compile_cmd,
-  deps=['./services/api-gateway', './shared'], labels="compiles")
+  deps=['./services/api-gateway', './shared'], labels='compiles')
 
-
-docker_build_with_restart(
+# Push to registry using custom_build (publish=True forces push)
+custom_build(
   'ride-sharing/api-gateway',
-  '.',
-  entrypoint=['/app/build/api-gateway'],
-  dockerfile='./infra/development/docker/api-gateway.Dockerfile',
-  only=[
-    './build/api-gateway',
-    './shared',
+  'docker build -t $EXPECTED_REF -f infra/development/docker/api-gateway.Dockerfile .',
+  deps=[
+    'infra/development/docker/api-gateway.Dockerfile',
+    'build/api-gateway',
+    'shared',
   ],
-  live_update=[
-    sync('./build', '/app/build'),
-    sync('./shared', '/app/shared'),
-  ],
+  publish=True,
 )
 
 k8s_yaml('./infra/development/k8s/api-gateway-deployment.yaml')
 k8s_resource('api-gateway', port_forwards=8081,
-             resource_deps=['api-gateway-compile'], labels="services")
+             resource_deps=['api-gateway-compile'], labels='services')
 ### End of API Gateway ###
 ### Auth Service ###
 
@@ -51,31 +53,26 @@ if os.name == 'nt':
 local_resource(
   'auth-compile',
   auth_compile_cmd,
-  deps=['./services/auth', './shared'], labels="compiles")
+  deps=['./services/auth', './shared'], labels='compiles')
 
-
-docker_build_with_restart(
+# Push to registry
+custom_build(
   'ride-sharing/auth',
-  '.',
-  entrypoint=['/app/build/auth'],
-  dockerfile='./infra/development/docker/auth.Dockerfile',
-  only=[
-    './build/auth',
-    './shared',
-    './services/auth/migrations',
+  'docker build -t $EXPECTED_REF -f infra/development/docker/auth.Dockerfile .',
+  deps=[
+    'infra/development/docker/auth.Dockerfile',
+    'build/auth',
+    'shared',
+    'services/auth/migrations',
   ],
-  live_update=[
-    sync('./build', '/app/build'),
-    sync('./shared', '/app/shared'),
-    sync('./services/auth/migrations', '/app/migrations'),
-  ],
+  publish=True,
 )
 
 k8s_yaml('./infra/development/k8s/auth-deployment.yaml')
 k8s_resource('auth', port_forwards=8080,
-             resource_deps=['auth-compile'], labels="services")
+             resource_deps=['auth-compile'], labels='services')
 # Postgres deployment is loaded but not shown in UI
-# k8s_resource('postgres', labels="services")
+# k8s_resource('postgres', labels='services')
 ### End of Auth Service ###
 ### Logger Service ###
 
@@ -86,26 +83,24 @@ if os.name == 'nt':
 local_resource(
   'logger-service-compile',
   logger_compile_cmd,
-  deps=['./services/logger-service'], labels="compiles")
+  deps=['./services/logger-service'], labels='compiles')
 
-docker_build_with_restart(
+# Push to registry
+custom_build(
   'ride-sharing/logger-service',
-  '.',
-  entrypoint=['/app/build/logger-service'],
-  dockerfile='./infra/development/docker/logger-service.Dockerfile',
-  only=[
-    './build/logger-service',
+  'docker build -t $EXPECTED_REF -f infra/development/docker/logger-service.Dockerfile .',
+  deps=[
+    'infra/development/docker/logger-service.Dockerfile',
+    'build/logger-service',
   ],
-  live_update=[
-    sync('./build', '/app/build'),
-  ],
+  publish=True,
 )
 
 k8s_yaml('./infra/development/k8s/logger-service-deployment.yaml')
 k8s_resource('logger-service', port_forwards=8082,
-             resource_deps=['logger-service-compile'], labels="services")
+             resource_deps=['logger-service-compile'], labels='services')
 # Mongo deployment is loaded but not shown in UI
-# k8s_resource('mongo', labels="services")
+# k8s_resource('mongo', labels='services')
 ### End of Logger Service ###
 ### Mail Service ###
 
@@ -116,26 +111,23 @@ if os.name == 'nt':
 local_resource(
   'mail-service-compile',
   mail_compile_cmd,
-  deps=['./services/mail-service'], labels="compiles")
+  deps=['./services/mail-service'], labels='compiles')
 
-docker_build_with_restart(
+# Push to registry
+custom_build(
   'ride-sharing/mail-service',
-  '.',
-  entrypoint=['/app/build/mail-service'],
-  dockerfile='./infra/development/docker/mail-service.Dockerfile',
-  only=[
-    './build/mail-service',
-    './services/mail-service/templates',
+  'docker build -t $EXPECTED_REF -f infra/development/docker/mail-service.Dockerfile .',
+  deps=[
+    'infra/development/docker/mail-service.Dockerfile',
+    'build/mail-service',
+    'services/mail-service/templates',
   ],
-  live_update=[
-    sync('./build', '/app/build'),
-    sync('./services/mail-service/templates', '/app/templates'),
-  ],
+  publish=True,
 )
 
 k8s_yaml('./infra/development/k8s/mail-service-deployment.yaml')
 k8s_resource('mail-service', port_forwards=8083,
-             resource_deps=['mail-service-compile'], labels="services")
+             resource_deps=['mail-service-compile'], labels='services')
 ### End of Mail Service ###
 ### Trip Service ###
 
@@ -148,29 +140,26 @@ k8s_resource('mail-service', port_forwards=8083,
 # local_resource(
 #   'trip-service-compile',
 #   trip_compile_cmd,
-#   deps=['./services/trip-service', './shared'], labels="compiles")
+#   deps=['./services/trip-service', './shared'], labels='compiles')
 
-# docker_build_with_restart(
+# custom_build(
 #   'ride-sharing/trip-service',
-#   '.',
-#   entrypoint=['/app/build/trip-service'],
-#   dockerfile='./infra/development/docker/trip-service.Dockerfile',
-#   only=[
-#     './build/trip-service',
-#     './shared',
+#   'docker build -t $EXPECTED_REF -f infra/development/docker/trip-service.Dockerfile .',
+#   deps=[
+#     'infra/development/docker/trip-service.Dockerfile',
+#     'build/trip-service',
+#     'shared',
 #   ],
-#   live_update=[
-#     sync('./build', '/app/build'),
-#     sync('./shared', '/app/shared'),
-#   ],
+#   publish=True,
 # )
 
 # k8s_yaml('./infra/development/k8s/trip-service-deployment.yaml')
-# k8s_resource('trip-service', resource_deps=['trip-service-compile'], labels="services")
+# k8s_resource('trip-service', resource_deps=['trip-service-compile'], labels='services')
 
 ### End of Trip Service ###
 ### Web Frontend ###
 
+# Optional: push to registry if needed; for now keep as local build
 docker_build(
   'ride-sharing/web',
   '.',
@@ -178,18 +167,7 @@ docker_build(
 )
 
 k8s_yaml('./infra/development/k8s/web-deployment.yaml')
-k8s_resource('web-trip', port_forwards=3000, labels="frontend")
-
-# Web Portal (Angular SSR)
-# Temporarily disabled - uncomment to enable
-# docker_build(
-#   'ride-sharing/web-portal',
-#   '.',
-#   dockerfile='./infra/development/docker/web-portal.Dockerfile',
-# )
-# 
-# k8s_yaml('./infra/development/k8s/web-portal-deployment.yaml')
-# k8s_resource('web-portal', port_forwards=4000, labels="frontend")
+k8s_resource('web-trip', port_forwards=3000, labels='frontend')
 
 ### End of Web Frontend ###
 ### Portal API Gateway ###
@@ -202,7 +180,7 @@ k8s_resource('web-trip', port_forwards=3000, labels="frontend")
 # )
 # 
 # k8s_yaml('./infra/development/k8s/portal-api-gateway-deployment.yaml')
-# k8s_resource('portal-api-gateway', port_forwards=5050, labels="services")
+# k8s_resource('portal-api-gateway', port_forwards=5050, labels='services')
 
 ### End of Portal API Gateway ###
 ### API .NET Gateway ###
@@ -216,7 +194,7 @@ k8s_resource('web-trip', port_forwards=3000, labels="frontend")
 # )
 # 
 # k8s_yaml('./infra/development/k8s/api-net-gateway-deployment.yaml')
-# k8s_resource('api-net-gateway', port_forwards=8084, labels="services")
+# k8s_resource('api-net-gateway', port_forwards=8084, labels='services')
 
 ### End of API .NET Gateway ###
 ### Word Search App ###
@@ -229,7 +207,7 @@ k8s_resource('web-trip', port_forwards=3000, labels="frontend")
 # )
 # 
 # k8s_yaml('./infra/development/k8s/web-ng-word-search-deployment.yaml')
-# k8s_resource('web-ng-word-search', port_forwards=6001, labels="frontend")
+# k8s_resource('web-ng-word-search', port_forwards=6001, labels='frontend')
 
 ### End of Word Search App ###
 ### Flutter Mobile App ###
@@ -242,6 +220,6 @@ k8s_resource('web-trip', port_forwards=3000, labels="frontend")
 # )
 # 
 # k8s_yaml('./infra/development/k8s/ecom-flutter-deployment.yaml')
-# k8s_resource('ecom-flutter', port_forwards=5000, labels="mobile")
+# k8s_resource('ecom-flutter', port_forwards=5000, labels='mobile')
 
 ### End of Flutter Mobile App ###
