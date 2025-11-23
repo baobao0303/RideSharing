@@ -1,8 +1,9 @@
 # Multi-stage build for logger-service (build inside container)
 FROM golang:1.23 AS builder
-WORKDIR /app
-# Copy only the logger-service module
-COPY services/logger-service/ ./
+WORKDIR /workspace
+# Copy full repo so replace ../../shared/generated works
+COPY . .
+WORKDIR /workspace/services/logger-service
 # Prepare module proxy and tidy dependencies (generates go.sum)
 ENV GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org
 RUN go mod tidy

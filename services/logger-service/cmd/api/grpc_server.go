@@ -1,5 +1,5 @@
-//go:build grpc
-// +build grpc
+//go:build grpc && !nogrpc
+// +build grpc,!nogrpc
 
 package main
 
@@ -9,10 +9,11 @@ import (
 	"log"
 	"net"
 
+	"log-service/data"
+	loggerpb "ride-sharing/shared/generated/logger"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	loggerpb "ride-sharing/shared/generated/logger"
-	"log-service/data"
 )
 
 const grpcPort = 50001

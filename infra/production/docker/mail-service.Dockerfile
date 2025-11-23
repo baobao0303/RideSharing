@@ -1,8 +1,11 @@
 # Multi-stage build for mail-service (build inside container)
 FROM golang:1.23 AS builder
-WORKDIR /app
-# Copy only the mail-service module
-COPY services/mail-service/ ./
+WORKDIR /workspace
+# Copy full repo so replace ../../shared/generated works
+COPY . .
+WORKDIR /workspace/services/mail-service
+# Exclude grpc files during tidy/build unless explicitly enabled
+ENV GOFLAGS=-tags=nogrpc
 # Prepare module proxy and tidy dependencies (generates go.sum)
 ENV GOPROXY=https://proxy.golang.org,direct GOSUMDB=sum.golang.org
 RUN go mod tidy
